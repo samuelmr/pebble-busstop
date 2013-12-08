@@ -1,0 +1,18 @@
+{
+  "uuid": "8050cdfd-fa0e-4ea7-90ea-1980f2e41578",
+  "shortName": "HSL Stop",
+  "longName": "Next departures from HSL stops",
+  "companyName": "Samuel Rinnetmaki",
+  "versionCode": 1,
+  "capabilities": [ "location", "configurable" ],
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
