@@ -43,19 +43,27 @@ static void window_load(Window *window) {
 }
 
 static void window_unload(Window *window) {
-  for (int i = number_of_deps; i > 0; i--) {
+  for (int i = number_of_deps - 1; i >= 0; i--) {
     Departure *dep = &departures[i];
     if (dep && dep->time_text) {
-     text_layer_destroy(dep->time_text);
+      text_layer_destroy(dep->time_text);
     }
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Departure %d/%d, removed time_text", i, number_of_deps);
     if (dep && dep->dest_text) {
-     text_layer_destroy(dep->dest_text);
+      text_layer_destroy(dep->dest_text);
     }
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Departure %d/%d, removed dest_text", i, number_of_deps);
+ /* will crash the app
     if (dep && dep->line_text) {
-     text_layer_destroy(dep->line_text);
+      text_layer_destroy(dep->line_text);
     }
+ */
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Departure %d/%d, removed line_text", i, number_of_deps);
   }
-  text_layer_destroy(stop_name);
+  if (stop_name) {
+   text_layer_destroy(stop_name);
+  }
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "removed stop_name");
 }
 
 void in_received_handler(DictionaryIterator *received, void *context) {
@@ -78,7 +86,7 @@ void in_received_handler(DictionaryIterator *received, void *context) {
   
   part = dict_read_next(received);
   strcpy(dep->line, part->value->cstring);
-  dep->line_text = text_layer_create(GRect(0, padding, 30, 22));
+  dep->line_text = text_layer_create(GRect(0, padding, 30, 20));
   text_layer_set_background_color(dep->line_text, GColorBlack);
   text_layer_set_text_color(dep->line_text, GColorWhite);
   text_layer_set_font(dep->line_text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));

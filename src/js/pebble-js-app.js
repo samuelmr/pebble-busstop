@@ -77,6 +77,7 @@ Pebble.addEventListener("ready",
       stops[stops.length] = "2152232";
       lines = "|27|27V|27N|";
     }
+    messageQueue = [];
     refreshStops();
     initialized = true;
   }
