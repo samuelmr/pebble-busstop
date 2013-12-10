@@ -57,8 +57,8 @@ static void window_unload(Window *window) {
     if (dep && dep->line_text) {
       text_layer_destroy(dep->line_text);
     }
- */
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Departure %d/%d, removed line_text", i, number_of_deps);
+ */
   }
   if (stop_name) {
    text_layer_destroy(stop_name);
