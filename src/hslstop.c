@@ -4,6 +4,7 @@ int max_deps = 7;
 int padding = 24;
 const bool animated = true;
 TextLayer *stop_name;
+TextLayer *init_text;
 Window *window;
 Layer *window_layer;
 GRect bounds;
@@ -17,27 +18,31 @@ typedef struct{
   TextLayer *time_text;
 } Departure;
 
-static Departure departures[10];
+static Departure departures[7];
 
+/*
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
-  window_stack_pop(animated);
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  // window_stack_pop(animated);
 }
+*/
 
+/*
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_click_subscribe(BUTTON_ID_BACK, back_click_handler);
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
+*/
 
 static void window_load(Window *window) {
 }
@@ -76,6 +81,9 @@ void in_received_handler(DictionaryIterator *received, void *context) {
 
   part = dict_read_first(received);
   if (number_of_deps == 0) {
+    if (init_text) {
+      text_layer_destroy(init_text);
+    }
     stop_name = text_layer_create(GRect(0, 0, bounds.size.w, 23));
     text_layer_set_font(stop_name, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
     text_layer_set_text_alignment(stop_name, GTextAlignmentLeft);
@@ -119,6 +127,9 @@ void in_received_handler(DictionaryIterator *received, void *context) {
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Message from phone dropped: %d", reason);
+  if (init_text) {
+    text_layer_set_text(init_text, "Message from phone dropped...");
+  }
 }
 
 static void init(void) {
@@ -129,7 +140,9 @@ static void init(void) {
   const uint32_t outbound_size = 1024;
   app_message_open(inbound_size, outbound_size);
   window = window_create();
+/*
   window_set_click_config_provider(window, click_config_provider);
+*/
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
@@ -137,6 +150,11 @@ static void init(void) {
   window_layer = window_get_root_layer(window);
   bounds = layer_get_frame(window_layer);
   window_stack_push(window, animated);
+  init_text = text_layer_create(GRect(5, 50, bounds.size.w-10, 50));
+  text_layer_set_font(init_text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  text_layer_set_text_alignment(init_text, GTextAlignmentLeft);
+  layer_add_child(window_layer, text_layer_get_layer(init_text));
+  text_layer_set_text(init_text, "Loading data...");
 }
 
 static void deinit(void) {
