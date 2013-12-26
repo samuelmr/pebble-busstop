@@ -45,6 +45,11 @@ static void click_config_provider(void *context) {
 */
 
 static void window_load(Window *window) {
+  init_text = text_layer_create(GRect(5, 50, bounds.size.w-10, 50));
+  text_layer_set_font(init_text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  text_layer_set_text_alignment(init_text, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(init_text));
+  text_layer_set_text(init_text, "Loading data...");
 }
 
 static void window_unload(Window *window) {
@@ -127,8 +132,8 @@ void in_received_handler(DictionaryIterator *received, void *context) {
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Message from phone dropped: %d", reason);
-  if (init_text) {
-    text_layer_set_text(init_text, "Message from phone dropped...");
+  if ((number_of_deps == 0) && init_text) {
+    text_layer_set_text(init_text, "Message dropped...");
   }
 }
 
@@ -150,11 +155,6 @@ static void init(void) {
   window_layer = window_get_root_layer(window);
   bounds = layer_get_frame(window_layer);
   window_stack_push(window, animated);
-  init_text = text_layer_create(GRect(5, 50, bounds.size.w-10, 50));
-  text_layer_set_font(init_text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  text_layer_set_text_alignment(init_text, GTextAlignmentLeft);
-  layer_add_child(window_layer, text_layer_get_layer(init_text));
-  text_layer_set_text(init_text, "Loading data...");
 }
 
 static void deinit(void) {
