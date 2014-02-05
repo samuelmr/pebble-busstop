@@ -7,6 +7,10 @@ var MAX_DEPS = 7;
 var departureURI = "http://pubtrans.it/hsl/reittiopas/departure-api?max=25";
 
 function refreshStops() {
+  if ((stops.length <= 0) || (lines.length <= 0)) {
+    // alert - not cofigured
+    return false;
+  }
   var href = departureURI;
   for (var i=0; i<stops.length; i++) {
     href += "&stops%5B%5D=" + stops[i];
@@ -68,15 +72,6 @@ function appMessageNack(e) {
 Pebble.addEventListener("ready",
   function(e) {
     console.log("JavaScript app ready and running!");
-    var d = new Date();
-    if ((d.getHours() > 12) && (d.getHours() < 20)) {
-      stops[stops.length] = "1174502";
-      lines = "|A|E|L|S|U|Y|";
-    }
-    else {
-      stops[stops.length] = "2152232";
-      lines = "|27|27V|27N|";
-    }
     messageQueue = [];
     refreshStops();
     initialized = true;
@@ -87,14 +82,15 @@ Pebble.addEventListener("webviewclosed",
   function(e) {
     var options = JSON.parse(decodeURIComponent(e.response));
     console.log("Webview window returned: " + JSON.stringify(options));
-    var stops = options["0"].split("|");
+    stops = options['stops'];
+    lines = options['lines'];
     refreshStops();
   }
 );
 
 Pebble.addEventListener("showConfiguration",
   function() {
-    var uri = "https://rawgithub.com/samuelmr/pebble-hslstop/master/configure.html";
+    var uri = "https://rawgithub.com/samuelmr/pebble-busstop/master/configure.html";
     console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
   }

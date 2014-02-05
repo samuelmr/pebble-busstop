@@ -1,0 +1,787 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="HandheldFriendly" content="True" />
+<meta name="MobileOptimized" content="width" />
+<title>Configure</title>
+<style>
+ html {
+  height: 100%;
+  margin: 0em;
+  padding: 0em;
+  width: 100%;
+ }
+ body {
+  font-family: 'Open Sans',Helvetica,Arial,sans-serif;
+  font-size: smaller;
+  margin: 0;
+ }
+ header {
+  height: 13em;
+  overflow: auto;
+ }
+ #mc {
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  overflow: hidden;
+  position: absolute;
+  right: 19em;
+  top: 2em;
+  z-index: 1;
+ }
+ #md {
+  height: 100%;
+  width: 100%;
+ }
+ #tools {
+  height: 2em;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  right: 19em;
+  top: 0;
+  z-index: 2;
+ }
+ #td {
+  border-color: #000;
+  border-style: solid;
+  border-width: 0 0 0 1px;
+ }
+ #tc {
+  float: right;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 19em;
+  z-index: 3;
+ }
+ #tt {
+  background-color: #FFF;
+  height: 100%;
+  padding: 0.5em;
+  position: relative;
+ }
+ p.iehack {
+  display: none;
+ }
+ h1, h2 {
+  margin: 0;
+ }
+ h1 {
+  font-size: 1em;
+ }
+ h1 .check {
+  float: right;
+ }
+ h2 {
+  font-size: 0.75em;
+  font-weight: normal;
+  float: left;
+ }
+ p.checkin {
+  float: right;
+  margin: 0;
+  padding: 0;
+ }
+ table {
+  border-collapse: collapse;
+  width: 100%;
+ }
+ th {
+  background-color: #333;
+  font-weight: 400;
+  color: #FFF;
+  padding: 0.5em;
+  text-align: left;
+ }
+ td {
+  padding: 0.5em;
+ }
+ .line {
+  padding: 0 0.5em 0 0;
+  text-align: right;
+  width: 3em;
+ }
+ .check {
+  text-align: right;
+ }
+ .check input {
+  margin: 0;
+  padding: 0;
+  width: auto !important;
+ }
+ tr:hover td {
+  background-color: #CCC;
+  cursor: pointer;
+  text-decoration: underline;
+ }
+ fieldset {
+  border-width: 0;
+  margin: 0.5em 0 0 0;
+ }
+ .closed, .open {
+  border: 1px solid #999;
+  clear: both;
+  margin: 0.5em 0;
+  padding: 0.5em;
+  min-height: 2em;
+ }
+ .closed table {
+  display: none;
+ }
+ .open table {
+  display: table;
+ }
+ #progressbar {
+  display: none;
+ }
+ @media screen and (max-width: 30em) {
+  #mc {
+   display: none;
+  }
+  #tc {
+   width: 90%;
+   margin: 2em 5%;
+  }
+  #tools {
+   right: 1em;
+  }
+ }
+
+</style>
+</head>
+<body id="bc">
+<div id="tc"><div id="tt"><form method="get" action="#" id="config"><fieldset id="search"><legend>Hae osoitteella</legend><label for="key">Osoite</label><input type="text" id="key" name="key" onkeyup="searchStops(this.value)" /><button onclick="submitSearch">Hae</button></fieldset><fieldset id="current"><legend>Valitse pys&auml;kit ja linjat</legend></fieldset><fieldset id="selected"></fieldset><fieldset><input type="submit" id="submit" value="Use these" /></fieldset></form></div></div><div id="mc"><div id="md"><!--[if IE]><p class="iehack">.</p><![endif]--></div></div><form id="tools" action="#">Hae <input type="text" name="ms" id="ms" size="2" maxlength="3" value="5" /> l&auml;hint&auml; pys&auml;kki&auml; <button onclick="getStops(); return false;" id="updatebutton">P&auml;ivit&auml;</button></form>
+<script src="http://api.maps.nokia.com/2.2.4/jsl.js?with=maps,positioning" type="text/javascript" charset="utf-8">
+</script>
+<script type="text/javascript">
+ // <![CDATA[
+
+ // CONFIGURATION SETTINGS
+
+ // replace with your own proxy 
+ var apiBase = 'http://pubtrans.it/hsl/api-proxy?';
+
+ // or add your own credentials and remove commenting
+ // var apiBase = 'http://api.reittiopas.fi/hsl/prod/?' +
+ //               'user=<token>&pass=<pass>&';
+
+ apiBase += 'epsg_in=4326&epsg_out=4326';
+ var pathUrl = apiBase + '&request=lines';
+ var areaUrl = apiBase + '&request=stops_area';
+ var stopUrl = apiBase + '&request=stop';
+ var searchUrl = apiBase + '&request=geocode&loc_types=stop';
+
+ var DEFAULT_RADIUS = 400;
+ var MAX_DIAMETER = 5000;
+
+ var LOCATION_TIMEOUT = 30 * 1000;
+ var LOCATION_MAXAGE = 15 * 60 * 1000;
+ var LOCATION_HIACC = true;
+
+ var MAX_ZOOM_LEVEL = 18;
+ var MIN_ZOOM_LEVEL = 10;
+ var MIN_ACCURACY = 2500;
+
+ var def_lat = 60.31;
+ var def_lng = 24.96;
+ var zoom = 11;
+ var lang = 'fi';
+ var iUrl = 'i';
+
+ // END CONFIGURATION
+
+ var lat;
+ var lng;
+ var stops = [];
+ var lines = [];
+ var currentAccuracy = DEFAULT_RADIUS;
+ var timeTables = {};
+ var linePaths = {};
+ var addedMarkers = new nokia.maps.map.Container();
+ var bubbles = new nokia.maps.map.component.InfoBubbles();
+ var addedPlines = {};
+ var totalLines = {};
+ var totalLineCount = 0;
+ var activeStop;
+ var watcher;
+ var xhr = {};
+
+ var f = document.getElementById('config')
+ f.onsubmit=submitSearch;
+
+ var sb = document.getElementById('submit')
+ sb.onclick = sendConfig;
+
+ var stopTypes = {'1': 'bus', // helsinki
+                  '2': 'bus', // seutu, Espoo, Vantaa, Kauniainen, ...
+                  '4': 'tram',
+                  '5': 'train',
+                  '6': 'metro'};
+
+ var pens = {};
+ pens['bus'] = {'strokeColor': '#0098', 'lineWidth': 6};
+ pens['ferry'] = {'strokeColor': '#06C8', 'lineWidth': 5};
+ pens['metro'] = {'strokeColor': '#C60C', 'lineWidth': 5};
+ pens['train'] = {'strokeColor': '#9008', 'lineWidth': 4};
+ pens['tram'] = {'strokeColor': '#060A', 'lineWidth': 4};
+ pens['uline'] = {'strokeColor': '#0098', 'lineWidth': 6};
+ var defaultPen = {'strokeColor': '#CCC8', 'lineWidth': 6};
+
+ var iconUrls = {'bus': iUrl + '/bus.gif',
+                 'ferry': iUrl + '/ferry.gif',
+                 'metro': iUrl + '/metro.gif',
+                 'train': iUrl + '/train.gif',
+                 'tram': iUrl + '/tram.gif',
+                 'uline': iUrl + '/bus.gif',
+                 'undefined': iUrl + '/bus.gif'};
+
+ var actIcons = {};
+ var dimIcons = {};
+
+ for (var i in iconUrls) {
+  var ico = new nokia.maps.gfx.BitmapImage(iconUrls[i]);
+  dimIcons[i] = ico.clone(document, 32, 32);
+  actIcons[i] = ico.clone(document, 64, 64);
+ }
+ var bcd = document.getElementById('bc');
+ var ttd = document.getElementById('current');
+ var stops_request = new XMLHttpRequest();
+ var lines_request = new XMLHttpRequest();
+ var paths_request = new XMLHttpRequest();
+ var search_request = new XMLHttpRequest();
+
+ var coords = new nokia.maps.geo.Coordinate(def_lat, def_lng);
+ coords.accuracy = currentAccuracy;
+ var opts = {'zoomLevel': zoom, 'center': coords};
+ opts['components'] = [new nokia.maps.map.component.Behavior(),
+ 		       new nokia.maps.map.component.ZoomBar(),
+                       new nokia.maps.map.component.Traffic(),
+ 		       bubbles];
+ opts['provider'] = nokia.maps.map.Display.SMART_PT;
+ var mcd = document.getElementById('mc');
+ var mdd = document.getElementById('md');
+ var map = new nokia.maps.map.Display(mdd, opts);
+ opts = {'draggable': true};
+ var me = new nokia.maps.map.StandardMarker(coords, opts);
+ var myCircle = new nokia.maps.map.Circle(coords, coords.accuracy);
+ me.addObserver('coordinate', circleFollow);
+ me.addListener('dragend', refreshMap);
+ map.objects.addAll([me, myCircle]);
+
+ // var posopts = {'enableHighAccuracy': LOCATION_HIACC,
+ //                'timeout': LOCATION_TIMEOUT,
+ //                'maximumAge': LOCATION_MAXAGE};
+
+ var posopts = {};
+
+ if (nokia.maps.positioning.Manager) {
+  var positioning = new nokia.maps.positioning.Manager();
+  positioning.getCurrentPosition(function(pos) {
+    currentAccuracy = pos.coords.accuracy;
+    me.set('coordinate', pos.coords);
+    refreshMap();
+   },
+   function(err) {
+   },
+   posopts
+  );
+ }
+ else if (lat && lng) {
+  focusMap();
+ }
+ window.addEventListener('orientationchange', redraw, false);
+ window.addEventListener('resize', redraw, false);
+/*
+ if (bcd && bcd.requestFullscreen) {
+  bcd.requestFullscreen();
+ }
+ else if (bcd && bcd.mozRequestFullscreen) {
+  bcd.mozRequestFullscreen();
+ }
+ else if (bcd && bcd.webkitRequestFullscreen) {
+  bcd.webkitRequestFullscreen();
+ }
+*/
+
+ function focusMap() {
+  var pos = me.get('coordinate');
+  map.setCenter(pos);
+ }
+
+ function refreshMap() {
+  focusMap();
+  getStops();
+ }
+
+ function circleFollow(obj, key, value, oldValue) {
+  myCircle.set('center', value);
+  myCircle.set('radius', currentAccuracy);
+  if (myCircle.isVisible && currentAccuracy >= MIN_ACCURACY) {
+   map.objects.remove(myCircle);
+  }
+  else if (!myCircle.isVisible && currentAccuracy <= MIN_ACCURACY) {
+   map.objects.add(myCircle);
+  }
+ }
+
+ function submitSearch(e) {
+  e.preventDefault();
+  searchStops(this.key.value);
+  return false;
+ }
+
+ function searchStops(key) {
+  resetStops();
+  if (key.length < 3) {
+   return false;
+  }
+  search_request.abort();
+  searchHref = searchUrl + '&key=' + key;
+  search_request.open('GET', searchHref, true);
+  search_request.onreadystatechange = handleSearch;
+  search_request.send(null);
+  return false;
+ }
+ function resetStops() {
+  addedMarkers.objects.clear();
+  var divs = ttd.getElementsByTagName('div');
+  for (var i=0; i<divs.length; i++) {
+   if (divs[i] && divs[i].parentNode) {
+    divs[i].parentNode.removeChild(divs[i]);
+   }
+  }
+ }
+ function handlePaths() {
+  if (this.readyState == 4 && this.status == 200) {
+   var response = JSON.parse(this.responseText);
+   if (!response || !response[0]) {
+    return false;
+   }
+   for (var i=0; i<response.length; i++) {
+    if (!response[i]) {
+     continue;
+    }
+    linePaths[response[i]['code']] = response[i]['line_shape'].split('|');
+   }
+  }
+ }
+ function handleStops() {
+  if (this.readyState == 4 && this.status == 200) {
+   resetStops();
+   totalLines = {};
+   totalLineCount = 0;
+   var response = JSON.parse(this.responseText);
+   if (!response) {
+    return false;
+   }
+   var stops = response;
+   var stopMarkers = new nokia.maps.map.Container();
+   for (var i=0; i<stops.length; i++) {
+    var s = stops[i];
+    var id = s['code'];
+    var type = stopTypes[id.substr(4,1)];
+    var code = s['codeShort'];
+    var name = s['name'];
+    var coords = s['coords'].split(',');
+    var addr = s['address'];
+    var lng = coords[0];
+    var lat = coords[1];
+    var loc = new nokia.maps.geo.Coordinate(lat, lng, 0, 1);
+    var ico = dimIcons[type];
+    var opts = {'icon': ico, 'anchor': [ico.width/2,ico.height/2]}
+    var mrk = new nokia.maps.map.Marker(loc, opts);
+    if (mrk) {
+     mrk.set('stop', id);
+     mrk.set('stopStyle', type);
+     mrk.addListener('click', showInfo, true);
+     mrk.addListener('tap', showInfo, true);
+     var d = new Date();
+     var h = d.getHours();
+     var m = d.getMinutes() - 5;
+     if (m < 0) {
+      m += 60;
+      h -= 1;
+     }
+     if (h < 0) {
+      h = 0;
+      m = 0;
+     }
+     if (h < 10) {
+      h = '' + '0' + h;
+     }
+     if (m < 10) {
+      m = '' + '0' + m;
+     }
+     var stopHref = stopUrl + '&code=' + id + '&time=' + h + m;
+     xhr[id] = new XMLHttpRequest();
+     xhr[id].open('GET', stopHref, true);
+     xhr[id].onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+       var s = JSON.parse(this.responseText);
+       if (s[0]) {
+        s = s[0];
+       }
+       var id = s['code'];
+       var code = s['code_short'];
+       var name = s['name_fi'];
+       var city = s['city_fi'];
+       var addr = s['address_fi'];
+       var ls = s['lines'];
+       if (ls && ls.length) {
+        timeTables[id] = createTable(id, code, name, city, addr, ls);
+        ttd.appendChild(timeTables[id]);
+       }
+       if (totalLineCount > 0) {
+        var pathsHref = pathUrl + '&query=';
+        for (var i in totalLines) {
+         pathsHref += escape(i) + '|';
+        }
+        pathsHref = pathsHref.replace(/\|+$/, '');
+        paths_request.abort();
+        paths_request.open('GET', pathsHref, true);
+        paths_request.onreadystatechange = handlePaths;
+        paths_request.send(null);
+       }
+      }
+     };
+     xhr[id].send(null);
+    };
+    if (mrk) {
+     stopMarkers.objects.add(mrk);
+    }
+   }
+   addedMarkers = stopMarkers;
+   map.objects.add(addedMarkers);
+   fitMap();
+  }
+ }
+
+ function handleSearch() {
+  if (this.readyState == 4 && this.status == 200) {
+   resetStops();
+   totalLines = {};
+   totalLineCount = 0;
+   var response = JSON.parse(this.responseText);
+   if (!response) {
+    return false;
+   }
+   var stops = response;
+   var stopMarkers = new nokia.maps.map.Container();
+   for (var i=0; i<stops.length; i++) {
+    var s = stops[i];
+    var id = s['details']['code'];
+    var type = stopTypes[id.substr(4,1)];
+    var code = s['details']['shortCode'];
+    var name = s['name'];
+    var city = s['city'];
+    var addr = s['details']['address'];
+    var coords = s['coords'].split(',');
+    var lng = coords[0];
+    var lat = coords[1];
+    var ls = s['details']['lines'];
+    var name = s['name'];
+    var coords = s['coords'].split(',');
+    var loc = new nokia.maps.geo.Coordinate(lat, lng, 0, 1);
+    var ico = dimIcons[type];
+    var opts = {'icon': ico, 'anchor': [ico.width/2,ico.height/2]}
+    var mrk = new nokia.maps.map.Marker(loc, opts);
+    if (mrk) {
+     mrk.set('stop', id);
+     mrk.set('stopStyle', type);
+     mrk.addListener('click', showInfo, true);
+     mrk.addListener('tap', showInfo, true);
+     var d = new Date();
+     var h = d.getHours();
+     var m = d.getMinutes() - 5;
+     if (m < 0) {
+      m += 60;
+      h -= 1;
+     }
+     if (h < 0) {
+      h = 0;
+      m = 0;
+     }
+     if (h < 10) {
+      h = '' + '0' + h;
+     }
+     if (m < 10) {
+      m = '' + '0' + m;
+     }
+     if (ls && ls.length) {
+      timeTables[id] = createTable(id, code, name, city, addr, ls);
+      ttd.appendChild(timeTables[id]);
+     }
+     if (totalLineCount > 0) {
+      var pathsHref = pathUrl + '&query=';
+      for (var i in totalLines) {
+       pathsHref += escape(i) + '|';
+      }
+      pathsHref = pathsHref.replace(/\|+$/, '');
+      paths_request.abort();
+      paths_request.open('GET', pathsHref, true);
+      paths_request.onreadystatechange = handlePaths;
+      paths_request.send(null);
+     }
+    }
+    stopMarkers.objects.add(mrk);
+   }
+   addedMarkers = stopMarkers;
+   map.objects.add(addedMarkers);
+   fitMap();
+  }
+ }
+
+ function addStop(id, lat, lng, name, code, type) {
+  return mrk;
+ }
+
+ function createTable(id, code, name, city, addr, ls) {
+  var sd = document.createElement('div');
+  var t = document.createElement('table');
+  var tr = document.createElement('tr');
+  th = document.createElement('th');
+  th.appendChild(document.createTextNode('Linja'));
+  th.className = 'line';
+  tr.appendChild(th);
+  th = document.createElement('th');
+  th.appendChild(document.createTextNode('Minne'));
+  th.className = 'dest';
+  tr.appendChild(th);
+  var th = document.createElement('th');
+  th.className = 'check';
+  var box = document.createElement('input');
+  box.type = 'checkbox';
+  box.onchange = function() {
+   var boxes = sd.getElementsByTagName('input');
+   for (var k=0; k<boxes.length; k++) {
+    if (boxes[k].name == 'line') {
+     boxes[k].checked = this.checked;
+    }
+   }
+  };
+  th.appendChild(box);
+  tr.appendChild(th);
+  t.appendChild(tr);
+  for (var j=0; j<ls.length; j++) {
+   var parts = ls[j].split(':');
+   var jore = parseJore(parts[0]);
+   var line = jore['line'];
+   var type = jore['type'];
+   var dest = parts[1];
+   tr = document.createElement('tr');
+   tr.className = type;
+   td = document.createElement('td');
+   td.className = 'line';
+   var label = document.createElement('label');
+   label.setAttribute('for', 'line' + j);
+   label.appendChild(document.createTextNode(line));
+   td.appendChild(label);
+   tr.appendChild(td);
+   td = document.createElement('td');
+   td.className = 'dest';
+   label = document.createElement('label');
+   label.setAttribute('for', 'stop' + code + 'line' + j);
+   label.appendChild(document.createTextNode(dest));
+   td.appendChild(label);
+   tr.appendChild(td);
+   var td = document.createElement('td');
+   td.className = 'check';
+   var box = document.createElement('input');
+   box.type = 'checkbox';
+   box.name = 'line';
+   box.value = parts[0];
+   box.id = 'stop' + code + 'line' + j;
+   td.appendChild(box);
+   tr.appendChild(td);
+   t.appendChild(tr);
+  }
+  sd.appendChild(t);
+/*
+  var sub = document.createElement('input');
+  sub.type = 'submit';
+  sub.value = 'OK';
+  sub.onclick = function() {
+   var ips = sd.getElementsByTagName('input');
+   for (var k=0; k<ips.length; k++) {
+    if (ips[k].name == 'line') {
+     lines.push(ips[k].value);
+    }         
+   }
+   alert(lines.length);
+  }
+  sd.appendChild(sub);
+*/
+  var myDiv = document.createElement('div');
+  myDiv.className = 'closed';
+  var h1 = document.createElement('h1');
+  var lab = document.createElement('label');
+  lab.setAttribute('for', 'stop' + id);
+  lab.appendChild(document.createTextNode(code + ', ' + name));
+  h1.appendChild(lab);
+  var cs = document.createElement('span');
+  cs.className = 'check';
+  var box = document.createElement('input');
+  box.type = 'checkbox';
+  box.name = 'stop';
+  box.value = id;
+  box.id = 'stop' + id;
+  box.onchange = function() {
+   this.parentNode.parentNode.parentNode.className = this.checked ? 'open' : 'closed';
+  };
+  cs.appendChild(box);
+  h1.appendChild(cs);
+  myDiv.appendChild(h1);
+  var h2 = document.createElement('h2');
+  h2.appendChild(document.createTextNode(addr + ', ' + city));
+  myDiv.appendChild(h2);
+  myDiv.appendChild(sd);
+  return myDiv;
+ }
+
+ function showInfo(e) {
+  if (e.target == activeStop) {
+   hideInfo();
+   return;
+  }
+  if (activeStop) {
+   hideInfo();
+  }
+  var ico = actIcons[e.target.get('stopStyle')];
+  e.target.set('icon', ico);
+  e.target.set('anchor', [ico.width/2,ico.height/2]);
+  var sId = e.target.get('stop');
+  activeStop = e.target;
+  document.getElementById('stop' + sId).checked = true;
+  var bhtml = timeTables[sId];
+  bhtml.className = 'open';
+  redraw(); 
+ }
+
+ function redraw() {
+  map.update(0, 1);
+  fitMap();
+ }
+ 
+ function hideInfo() {
+  var ico = dimIcons[activeStop.get('stopStyle')];
+  activeStop.set('icon', ico);
+  activeStop.set('anchor', [ico.width/2,ico.height/2]);
+  var sId = activeStop.get('stop');
+  document.getElementById('stop' + sId).checked = false;
+  var bhtml = timeTables[sId];
+  bhtml.className = 'closed';
+  activeStop = null;
+  redraw();
+ }
+ 
+ function removeMe(e) {
+  var obj = e.target;
+  for (var i in addedPlines) {
+   if (addedPlines[i] == obj) {
+    addedPlines[i] = null;
+   }
+  }
+  fitMap();
+ }
+ 
+ function fitMap() {
+  map.zoomTo(map.getBoundingBox(), false);
+  var bx = [];
+  var meb = nokia.maps.geo.BoundingBox.coverAll([me.get('coordinate')]);
+  if (meb) {
+   bx.push(meb);
+  }
+  var mb = addedMarkers.getBoundingBox();
+  if (mb) {
+   bx.push(mb);
+  }
+  map.zoomTo(nokia.maps.geo.BoundingBox.merge(bx), false);
+  if (map.zoomLevel > MAX_ZOOM_LEVEL) {
+   map.set('zoomLevel', MAX_ZOOM_LEVEL);
+  }
+  else if (map.zoomLevel < MIN_ZOOM_LEVEL) {
+   map.set('zoomLevel', MIN_ZOOM_LEVEL);
+  }
+ }
+ 
+ function getStops() {
+  var c = myCircle.center;
+  var r = myCircle.radius;
+  d = DEFAULT_RADIUS;
+  var max = document.getElementById('ms').value;
+  var stopsHref = areaUrl +
+                  '&center_coordinate=' + c.longitude + ',' + c.latitude +
+                  '&limit=' + max + '&diameter=' + d;
+  stops_request.abort();
+  stops_request.open('GET', stopsHref, true);
+  stops_request.onreadystatechange = handleStops;
+  stops_request.send(null);
+ }
+
+ function parseJore(code) {
+  var type, line;
+  if (code.substr(0, 4) == '1019') {
+   type = 'ferry';
+  }
+  else if (code.substr(0, 2) == '13') {
+   type = 'metro';
+   line = code.substr(4, 1);
+  }
+  else if (code.substr(4, 1) == 'J') {
+   type = 'bus'; // jouko
+   line = code.substr(4, 1).trim(code.substr(2, 2));
+  }
+  else if (code.substr(0, 2) == '11') {
+   type = 'bus'; // yolinja
+   line = trim(code.substr(2, 3));
+  }
+  else if ((code.substr(0, 1) == '7')) {
+   type = 'bus'; // U-linja
+   line = code.substr(1, 4).replace(/^0+/, '');
+  }
+  else if ((code.substr(0, 1) == '3')) {
+   type = 'train';
+   line = code.substr(4, 1);
+  }
+  else {
+   type = 'bus';
+   line = code.substr(1, 4).replace(/^0+/, '');
+   if ((code.substr(0, 1) == '1') && (line.replace(/[^\d]/g, '') <= 10)) {
+    type = 'tram';
+   }
+  }
+  return {'type': type, 'line': line};
+ }
+
+function sendConfig(e) {
+ e.preventDefault();
+ var inputs = f.getElementsByTagName('input');
+ var stops = [];
+ var lines = "|";
+ // does not check whether the chosen lines pass the chosen stops!
+ for (var i=0; i<inputs.length; i++) {
+  if (!inputs[i].checked) {
+   continue;
+  }
+  if (inputs[i].name == 'stop') {
+   stops.push(inputs[i].value);
+  }
+  if (inputs[i].name == 'line') {
+   lines += inputs[i].value + '|';
+  }
+ }
+ var conf = {'stops': stops, 'lines': lines};
+ location.href = 'pebblejs://close#' + JSON.stringify(conf);
+ return false;
+}
+ // ]]>
+</script>
+</body>
+</html>
