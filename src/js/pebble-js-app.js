@@ -1,13 +1,22 @@
+var MAX_DEPS = 7;
+var departureURI = "http://pubtrans.it/hsl/reittiopas/departure-api?max=25";
 var initialized = false;
 var messageQueue = [];
-var stops = [];
-var lines = "";
-var MAX_DEPS = 7;
+var options = [];
 
-var departureURI = "http://pubtrans.it/hsl/reittiopas/departure-api?max=25";
+if (localStorage) {
+ console.log("Stored configuration: " + localStorage.getItem('options'));
+ options = JSON.parse(localStorage.getItem('options')) || options;
+}
+
 
 function refreshStops() {
+  var stops = options['stops'] || [];
+  var lines = options['lines'] || "";
+  // pebble bug
+  lines = lines.replace(/\+/g, ' ');
   if ((stops.length <= 0) || (lines.length <= 0)) {
+    console.log("stops.length = " + stops.length + ", lines.length = " + lines.length);
     // alert - not cofigured
     return false;
   }
@@ -16,17 +25,21 @@ function refreshStops() {
     href += "&stops%5B%5D=" + stops[i];
   }
   var req = new XMLHttpRequest();
+  console.log("fetching " + href);
   req.open("GET", href, true);
   req.onload = function(e) {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState == 4) {
       if(this.status == 200) {
         var deps = JSON.parse(req.responseText);
+        console.log("OK, got " + deps.length + " departures");
         if (deps.length) {
           for (i=0; i<deps.length; i++) {
             var dep = deps[i];
-            if (lines.indexOf("|" + dep["line"] + "|") < 0) {
+            if (lines.indexOf("|" + dep["route"] + "|") < 0) {
+              console.log("route '" + dep["route"] + "' not in " + lines);
               continue;
             }
+            console.log("route '" + dep["route"] + "' found!");
             var msg = {};
             msg["0"] = dep["stopname"];
             msg["1"] = dep["line"];
@@ -45,7 +58,7 @@ function refreshStops() {
         }
       }
       else {
-        console.log("Error");
+        console.log("Error: " + this.status);
       }
     }
   }
@@ -80,10 +93,9 @@ Pebble.addEventListener("ready",
 
 Pebble.addEventListener("webviewclosed",
   function(e) {
-    var options = JSON.parse(decodeURIComponent(e.response));
+    options = JSON.parse(decodeURIComponent(e.response));
     console.log("Webview window returned: " + JSON.stringify(options));
-    stops = options['stops'];
-    lines = options['lines'];
+    localStorage['options'] = JSON.stringify(options);
     refreshStops();
   }
 );
